@@ -1,6 +1,7 @@
 package org.fenixedu.spaces.domain;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -31,35 +32,43 @@ public class TestFFTest {
         System.out.println(msg);
         Information info = space.getCurrent();
         while (info != null) {
-            System.out.printf("%s %s %s\n", info.getValidFrom().toString("yyyy-MM-dd"), info.getValidUntil() == null ? "-" : info
-                    .getValidUntil().toString("yyyy-MM-dd"), info.getAllocatableCapacity());
+            System.out.printf("%s ─ %s : %s : %s\n",
+                    info.getValidFrom() == null ? "∞" : info.getValidFrom().toString("yyyy-MM-dd"),
+                    info.getValidUntil() == null ? "∞" : info.getValidUntil().toString("yyyy-MM-dd"),
+                    dateEquals(info.getValidFrom(), info.getValidUntil()), info.getAllocatableCapacity());
             info = info.getPrevious();
         }
     }
 
+    private Boolean dateEquals(DateTime validFrom, DateTime validUntil) {
+        if (validFrom == null && validUntil == null) {
+            return Boolean.TRUE;
+        }
+        return validFrom == null ? Boolean.FALSE : validFrom.equals(validUntil);
+    }
+
     @Test
-    public void testFirstInsert() throws UnavailableException {
+    public void testFirstInsert() {
         DateTime start = new DateTime(2001, 01, 01, 0, 0);
         DateTime end = new DateTime(2015, 01, 01, 0, 0);
         final Information information = createInformation(start, end, 10);
         final Space space = createSpace(information);
         show("after insert at head", space);
-        assertEquals("Capacity must be 10", new Integer(10), space.getCapacity(new DateTime(2001, 01, 01, 0, 0)));
-        assertEquals("Capacity must be 10", new Integer(10), space.getCapacity(new DateTime(2012, 01, 01, 0, 0)));
-        assertEquals("Capacity must be 10", new Integer(10), space.getCapacity());
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity(new DateTime(2001, 01, 01, 0, 0)).get());
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity(new DateTime(2012, 01, 01, 0, 0)).get());
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity());
     }
 
-    @Test(expected = UnavailableException.class)
-    public void testExpectedException() throws UnavailableException {
+    public void testExpectedException() {
         DateTime start = new DateTime(2001, 01, 01, 0, 0);
         DateTime end = new DateTime(2015, 01, 01, 0, 0);
         final Information information = createInformation(start, end, 10);
         final Space space = createSpace(information);
-        space.getCapacity(new DateTime(2015, 01, 01, 0, 0));
+        Assert.assertTrue(!space.getAllocatableCapacity(new DateTime(2015, 01, 01, 0, 0)).isPresent());
     }
 
     @Test
-    public void testInsertAtHead() throws UnavailableException {
+    public void testInsertAtHead() {
         DateTime x1 = new DateTime(2001, 01, 01, 0, 0);
         DateTime x2 = new DateTime(2001, 12, 31, 0, 0);
 
@@ -72,12 +81,12 @@ public class TestFFTest {
         space.add(createInformation(x3, x4, 15));
         show("after insert head", space);
 
-        assertEquals("Capacity must be 10", new Integer(10), space.getCapacity(new DateTime(2001, 05, 01, 0, 0)));
-        assertEquals("Capacity must be 15", new Integer(15), space.getCapacity(new DateTime(2002, 05, 01, 0, 0)));
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity(new DateTime(2001, 05, 01, 0, 0)).get());
+        assertEquals("Capacity must be 15", new Integer(15), space.getAllocatableCapacity(new DateTime(2002, 05, 01, 0, 0)).get());
     }
 
     @Test
-    public void testInsertAtEnd() throws UnavailableException {
+    public void testInsertAtEnd() {
         DateTime x1 = new DateTime(2001, 01, 01, 0, 0);
         DateTime x2 = new DateTime(2002, 01, 01, 0, 0);
 
@@ -94,14 +103,14 @@ public class TestFFTest {
         space.add(createInformation(a1, a2, 17));
         show("after insert at tail", space);
 
-        assertEquals("Capacity must be 17", new Integer(17), space.getCapacity(a1));
-        assertEquals("Capacity must be 15", new Integer(15), space.getCapacity(x3));
-        assertEquals("Capacity must be 10", new Integer(10), space.getCapacity(x1));
+        assertEquals("Capacity must be 17", new Integer(17), space.getAllocatableCapacity(a1).get());
+        assertEquals("Capacity must be 15", new Integer(15), space.getAllocatableCapacity(x3).get());
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity(x1).get());
 
     }
 
     @Test
-    public void testInsertInTheMiddleDifferentInformations() throws UnavailableException {
+    public void testInsertInTheMiddleDifferentInformations() {
         DateTime x1 = new DateTime(2000, 01, 01, 0, 0);
         DateTime x2 = new DateTime(2001, 01, 01, 0, 0);
         Information x = createInformation(x1, x2, 10);
@@ -126,14 +135,14 @@ public class TestFFTest {
         space.add(a);
         show("after insert in the middle", space);
 
-        assertEquals("Capacity must be 10", new Integer(10), space.getCapacity(x1));
-        assertEquals("Capacity must be 20", new Integer(20), space.getCapacity(a1.plusDays(3)));
-        assertEquals("Capacity must be 12", new Integer(12), space.getCapacity(a2.plusDays(3)));
-        assertEquals("Capacity must be 15", new Integer(15), space.getCapacity(x5.plusDays(3)));
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity(x1).get());
+        assertEquals("Capacity must be 20", new Integer(20), space.getAllocatableCapacity(a1.plusDays(3)).get());
+        assertEquals("Capacity must be 12", new Integer(12), space.getAllocatableCapacity(a2.plusDays(3)).get());
+        assertEquals("Capacity must be 15", new Integer(15), space.getAllocatableCapacity(x5.plusDays(3)).get());
     }
 
     @Test
-    public void testInsertInTheMiddleSameInformations() throws UnavailableException {
+    public void testInsertInTheMiddleSameInformations() {
         DateTime x1 = new DateTime(2000, 01, 01, 0, 0);
         DateTime x2 = new DateTime(2001, 01, 01, 0, 0);
         Information x = createInformation(x1, x2, 10);
@@ -158,65 +167,65 @@ public class TestFFTest {
         space.add(a);
         show("after insert in the middle", space);
 
-        assertEquals("Capacity must be 10", new Integer(10), space.getCapacity(x1));
-        assertEquals("Capacity must be 20", new Integer(20), space.getCapacity(a1.plusDays(3)));
-        assertEquals("Capacity must be 10", new Integer(10), space.getCapacity(a2.plusDays(3)));
-        assertEquals("Capacity must be 15", new Integer(15), space.getCapacity(x5.plusDays(3)));
-        assertEquals("Capacity must be 15", new Integer(15), space.getCapacity());
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity(x1).get());
+        assertEquals("Capacity must be 20", new Integer(20), space.getAllocatableCapacity(a1.plusDays(3)).get());
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity(a2.plusDays(3)).get());
+        assertEquals("Capacity must be 15", new Integer(15), space.getAllocatableCapacity(x5.plusDays(3)).get());
+        assertEquals("Capacity must be 15", new Integer(15), space.getAllocatableCapacity());
     }
 
     @Test
-    public void testInsertTheSamePeriod() throws UnavailableException {
+    public void testInsertTheSamePeriod() {
         DateTime x1 = new DateTime(2000, 01, 01, 0, 0);
         DateTime x2 = new DateTime(2001, 01, 01, 0, 0);
 
         final Space space = createSpace(createInformation(x1, x2, 10));
         show("first insert", space);
-        assertEquals("Capacity must be 10", new Integer(10), space.getCapacity(x1));
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity(x1).get());
 
         DateTime x3 = new DateTime(2001, 01, 01, 0, 0);
         DateTime x4 = new DateTime(2002, 01, 01, 0, 0);
 
         space.add(createInformation(x3, x4, 12));
         show("second insert", space);
-        assertEquals("Capacity must be 12", new Integer(12), space.getCapacity(x3));
+        assertEquals("Capacity must be 12", new Integer(12), space.getAllocatableCapacity(x3).get());
 
         space.add(createInformation(x1, x2, 15));
         show("after same insert with different capacity", space);
-        assertEquals("Capacity must be 12", new Integer(12), space.getCapacity(x3));
-        assertEquals("Capacity must be 15", new Integer(15), space.getCapacity(x1));
+        assertEquals("Capacity must be 12", new Integer(12), space.getAllocatableCapacity(x3).get());
+        assertEquals("Capacity must be 15", new Integer(15), space.getAllocatableCapacity(x1).get());
     }
 
     @Test
-    public void testOpenEnd() throws UnavailableException {
+    public void testOpenEnd() {
         DateTime x1 = new DateTime(2000, 01, 01, 0, 0);
 
         final Space space = createSpace(createInformation(x1, null, 10));
         show("first insert", space);
-        assertEquals("Capacity is 10", new Integer(10), space.getCapacity());
+        assertEquals("Capacity is 10", new Integer(10), space.getAllocatableCapacity());
 
         DateTime x2 = new DateTime(2001, 01, 01, 0, 0);
         DateTime x3 = new DateTime(2002, 01, 01, 0, 0);
         space.add(createInformation(x2, x3, 15));
         show("split previous", space);
 
-        assertEquals("Capacity is 10", new Integer(10), space.getCapacity(x1));
-        assertEquals("Capacity is 15", new Integer(15), space.getCapacity(x2));
+        assertEquals("Capacity is 10", new Integer(10), space.getAllocatableCapacity(x1).get());
+        assertEquals("Capacity is 15", new Integer(15), space.getAllocatableCapacity(x2).get());
 
         DateTime x4 = new DateTime(1990, 01, 01, 0, 0);
         space.add(createInformation(x4, null, 20));
         show("replace all", space);
 
-        assertEquals("Capacity must be 20", new Integer(20), space.getCapacity(x1));
-        assertEquals("Capacity must be 20", new Integer(20), space.getCapacity(x2));
-        assertEquals("Capacity must be 20", new Integer(20), space.getCapacity(x4));
+        assertEquals("Capacity must be 20", new Integer(20), space.getAllocatableCapacity(x1).get());
+        assertEquals("Capacity must be 20", new Integer(20), space.getAllocatableCapacity(x2).get());
+        assertEquals("Capacity must be 20", new Integer(20), space.getAllocatableCapacity(x4).get());
     }
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
     @Test
-    public void testGaps() throws UnavailableException {
+    public void testGaps() {
         DateTime x1 = new DateTime(2000, 01, 01, 0, 0);
         DateTime x2 = new DateTime(2001, 01, 01, 0, 0);
 
@@ -229,32 +238,127 @@ public class TestFFTest {
         space.add(createInformation(x3, x4, 15));
         show("second insertion", space);
 
-        assertEquals("Capacity must be 10", new Integer(10), space.getCapacity(x1));
-        assertEquals("Capacity must be 15", new Integer(15), space.getCapacity(x3));
-        try {
-            space.getCapacity(x2);
-            Assert.fail("Capacity in the gap must return exception.");
-        } catch (UnavailableException e) {
-        }
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity(x1).get());
+        assertEquals("Capacity must be 15", new Integer(15), space.getAllocatableCapacity(x3).get());
+        Assert.assertTrue("Capacity in the gap must return exception.", !space.getAllocatableCapacity(x2).isPresent());
+
         space.add(createInformation(x2, x3, 12));
+
         show("insert in gap", space);
-        assertEquals("Capacity is 12", new Integer(12), space.getCapacity(x2));
-        assertEquals("Capacity must be 10", new Integer(10), space.getCapacity(x1));
-        assertEquals("Capacity must be 15", new Integer(15), space.getCapacity(x3));
+        assertEquals("Capacity is 12", new Integer(12), space.getAllocatableCapacity(x2).get());
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity(x1).get());
+        assertEquals("Capacity must be 15", new Integer(15), space.getAllocatableCapacity(x3).get());
 
         space.add(createInformation(new DateTime(2002, 01, 01, 0, 0), x3, 5));
         show("insert in gap", space);
-        assertEquals("Capacity is 12", new Integer(12), space.getCapacity(x2));
-        assertEquals("Capacity must be 10", new Integer(10), space.getCapacity(x1));
-        assertEquals("Capacity must be 15", new Integer(15), space.getCapacity(x3));
-        assertEquals("Capacity must be 5", new Integer(5), space.getCapacity(x3.minusDays(2)));
+        assertEquals("Capacity is 12", new Integer(12), space.getAllocatableCapacity(x2).get());
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity(x1).get());
+        assertEquals("Capacity must be 15", new Integer(15), space.getAllocatableCapacity(x3).get());
+        assertEquals("Capacity must be 5", new Integer(5), space.getAllocatableCapacity(x3.minusDays(2)).get());
 
         space.add(createInformation(new DateTime(1990, 01, 01, 0, 0), new DateTime(2020, 01, 01, 0, 0), 100));
         show("after replacement", space);
 
-        assertEquals("Capacity must be 100", new Integer(100), space.getCapacity(x1));
-        assertEquals("Capacity must be 100", new Integer(100), space.getCapacity(x3));
-        assertEquals("Capacity must be 100", new Integer(100), space.getCapacity(x3.minusDays(2)));
+        assertEquals("Capacity must be 100", new Integer(100), space.getAllocatableCapacity(x1).get());
+        assertEquals("Capacity must be 100", new Integer(100), space.getAllocatableCapacity(x3).get());
+        assertEquals("Capacity must be 100", new Integer(100), space.getAllocatableCapacity(x3.minusDays(2)).get());
+    }
+
+    @Test
+    public void testGapsInfinity() {
+        DateTime x1 = new DateTime(2000, 01, 01, 0, 0);
+        DateTime x2 = null;
+
+        DateTime x3 = new DateTime(2003, 01, 01, 0, 0);
+        DateTime x4 = null;
+
+        final Space space = createSpace(createInformation(x1, x2, 10));
+
+        show("first insertion", space);
+        space.add(createInformation(x3, x4, 15));
+        show("second insertion", space);
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity(x1).get());
+        assertEquals("Capacity must be 15", new Integer(15), space.getAllocatableCapacity(x3).get());
+        show("get validFrom", space);
+        assertEquals("Capacity must be 10", new Integer(15), space.getAllocatableCapacity());
+
+    }
+
+    @Test
+    public void testGapsInfinityMiddle() {
+        DateTime x1 = new DateTime(2000, 01, 01, 0, 0);
+        DateTime x2 = null;
+
+        DateTime x3 = new DateTime(2003, 01, 01, 0, 0);
+        DateTime x4 = new DateTime(2006, 01, 01, 0, 0);
+
+        final Space space = createSpace(createInformation(x1, x2, 10));
+
+        show("first insertion", space);
+        space.add(createInformation(x3, x4, 15));
+        show("second insertion", space);
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity(x1).get());
+        assertEquals("Capacity must be 15", new Integer(15), space.getAllocatableCapacity(x3).get());
+        show("get validFrom", space);
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity());
+
+    }
+
+    @Test
+    public void testGapsInfinityOverlap() {
+        DateTime x1 = new DateTime(2000, 01, 01, 0, 0);
+        DateTime x2 = null;
+
+        DateTime x3 = new DateTime(1990, 01, 01, 0, 0);
+        DateTime x4 = null;
+
+        final Space space = createSpace(createInformation(x1, x2, 10));
+
+        show("first insertion", space);
+        space.add(createInformation(x3, x4, 15));
+        show("second insertion", space);
+        assertEquals("Capacity must be 10", new Integer(15), space.getAllocatableCapacity(x1).get());
+        assertEquals("Capacity must be 15", new Integer(15), space.getAllocatableCapacity(x3).get());
+        show("get validFrom", space);
+        assertEquals("Capacity must be 10", new Integer(15), space.getAllocatableCapacity());
+
+    }
+
+    @Test
+    public void testGapsNotInfinityEnd() {
+        DateTime x1 = new DateTime(1998, 01, 01, 0, 0);
+        DateTime x2 = new DateTime(2001, 01, 01, 0, 0);
+
+        DateTime x3 = new DateTime(2000, 01, 01, 0, 0);
+        DateTime x4 = x2;
+        final Space space = createSpace(createInformation(x1, x2, 10));
+
+        show("first insertion", space);
+        space.add(createInformation(x3, x4, 15));
+        show("second insertion", space);
+        assertEquals("Capacity must be 10", new Integer(10), space.getAllocatableCapacity(x1).get());
+        assertEquals("Capacity must be 15", new Integer(15), space.getAllocatableCapacity(x3).get());
+        show("get validFrom", space);
+        assertTrue("no capacity at present date", !space.getInformation().isPresent());
+
+    }
+
+    @Test
+    public void testGapsNotInfinityStart() {
+        DateTime x1 = new DateTime(1998, 01, 01, 0, 0);
+        DateTime x2 = new DateTime(2001, 01, 01, 0, 0);
+
+        DateTime x3 = new DateTime(2000, 01, 01, 0, 0);
+        final Space space = createSpace(createInformation(x1, x2, 10));
+
+        show("first insertion", space);
+        space.add(createInformation(x1, x3, 15));
+        show("second insertion", space);
+        assertEquals("Capacity must be 10", new Integer(15), space.getAllocatableCapacity(x1).get());
+        assertEquals("Capacity must be 15", new Integer(10), space.getAllocatableCapacity(x3).get());
+        show("get validFrom", space);
+        assertTrue("no capacity at present date", !space.getInformation().isPresent());
+
     }
 
     Information createInformation(DateTime x1, DateTime x2, int capacity) {
